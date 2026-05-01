@@ -48,8 +48,8 @@ object NativeCallLogHelper {
                         else -> "UNKNOWN"
                     }
 
-                    val fromNumber = if (callTypeStr == "INCOMING" || callTypeStr == "MISSED") number else "Me"
-                    val toNumber = if (callTypeStr == "OUTGOING") number else "Me"
+                    val fromNumber = if (callTypeStr == "INCOMING" || callTypeStr == "MISSED") number else registeredNumber
+                    val toNumber = if (callTypeStr == "OUTGOING") number else registeredNumber
 
                     callLogs.add(
                         CallLogEntity(

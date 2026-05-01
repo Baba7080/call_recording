@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
@@ -21,7 +22,9 @@ import androidx.compose.foundation.verticalScroll
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import android.media.MediaPlayer
+import android.app.DatePickerDialog
 import java.io.File
+import java.util.*
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -47,6 +50,15 @@ fun MainScreen(
         }
 
         Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = { Text("ByteDail", fontWeight = FontWeight.Bold) },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            },
             bottomBar = {
                 NavigationBar {
                     tabs.forEachIndexed { index, title ->
@@ -129,7 +141,36 @@ fun DashboardScreen(permissionsState: MultiplePermissionsState, viewModel: MainV
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
-        Text("Call Statistics", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 16.dp))
+        val context = LocalContext.current
+        val calendar = Calendar.getInstance().apply { timeInMillis = viewModel.selectedDate }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Stats for ${java.text.SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(viewModel.selectedDate))}",
+                style = MaterialTheme.typography.titleLarge
+            )
+            IconButton(onClick = {
+                DatePickerDialog(
+                    context,
+                    { _, year, month, dayOfMonth ->
+                        val cal = Calendar.getInstance().apply {
+                            set(year, month, dayOfMonth, 0, 0, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }
+                        viewModel.selectedDate = cal.timeInMillis
+                    },
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH),
+                    calendar.get(Calendar.DAY_OF_MONTH)
+                ).show()
+            }) {
+                Icon(Icons.Default.DateRange, contentDescription = "Select Date")
+            }
+        }
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             StatCard("Incoming", stats.incomingCount.toString(), Color(0xFF4CAF50))

@@ -23,6 +23,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = application.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
 
     var searchQuery by mutableStateOf("")
+    var selectedDate by mutableStateOf(java.util.Calendar.getInstance().apply {
+        set(java.util.Calendar.HOUR_OF_DAY, 0)
+        set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0)
+        set(java.util.Calendar.MILLISECOND, 0)
+    }.timeInMillis)
     
     val allCallLogs: Flow<List<CallLogEntity>> = database.logsDao().getAllCallLogs()
     
@@ -37,19 +43,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val userNumber: String get() = prefs.getString("user_number", "") ?: ""
 
     val callStats: Flow<CallStats> = allCallLogs.map { logs ->
-        // Only show stats for the logged-in user
+        // Filter by user and selected date
         val currentUserLogs = logs.filter { it.registeredNumber == userNumber }
         
-        val hourlyMap = currentUserLogs.groupBy { 
+        val filteredByDate = currentUserLogs.filter { log ->
+            val logCal = java.util.Calendar.getInstance().apply { timeInMillis = log.dateMillis }
+            val selectedCal = java.util.Calendar.getInstance().apply { timeInMillis = selectedDate }
+            logCal.get(java.util.Calendar.YEAR) == selectedCal.get(java.util.Calendar.YEAR) &&
+            logCal.get(java.util.Calendar.DAY_OF_YEAR) == selectedCal.get(java.util.Calendar.DAY_OF_YEAR)
+        }
+        
+        val hourlyMap = filteredByDate.groupBy { 
             val cal = java.util.Calendar.getInstance().apply { timeInMillis = it.dateMillis }
             cal.get(java.util.Calendar.HOUR_OF_DAY)
         }.mapValues { it.value.size }
 
         CallStats(
-            incomingCount = currentUserLogs.count { it.callType == "INCOMING" },
-            outgoingCount = currentUserLogs.count { it.callType == "OUTGOING" },
-            missedCount = currentUserLogs.count { it.callType == "MISSED" },
-            totalDurationSeconds = currentUserLogs.sumOf { it.durationSeconds },
+            incomingCount = filteredByDate.count { it.callType == "INCOMING" },
+            outgoingCount = filteredByDate.count { it.callType == "OUTGOING" },
+            missedCount = filteredByDate.count { it.callType == "MISSED" },
+            totalDurationSeconds = filteredByDate.sumOf { it.durationSeconds },
             hourlyCounts = hourlyMap
         )
     }

@@ -87,15 +87,24 @@ class CallService : Service() {
 
     private fun saveCallData(type: String, number: String, duration: Long, recPath: String?) {
         scope.launch {
+            val prefs = getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+            val university = prefs.getString("university", "") ?: ""
+            val owner = prefs.getString("owner", "") ?: ""
+            val registeredNumber = prefs.getString("user_number", "") ?: ""
+
             val logEntity = CallLogEntity(
-                fromNumber = if (type == "INCOMING") number else "Me",
-                toNumber = if (type == "OUTGOING") number else "Me",
+                fromNumber = if (type == "INCOMING" || type == "MISSED") number else registeredNumber,
+                toNumber = if (type == "OUTGOING") number else registeredNumber,
                 callType = type,
                 durationSeconds = duration,
                 dateMillis = System.currentTimeMillis(),
-                simUsed = "Unknown" // Advanced Dual SIM SubscriptionManager logic omitted for brevity
+                simUsed = "Unknown",
+                universityName = university,
+                ownerName = owner,
+                registeredNumber = registeredNumber
             )
             val logId = database.logsDao().insertCallLog(logEntity)
+            Log.d("CallService", "Saved Call Log ID: $logId")
 
             if (recPath != null) {
                 val recEntity = RecordingEntity(
@@ -105,8 +114,8 @@ class CallService : Service() {
                     recordedAtMillis = System.currentTimeMillis()
                 )
                 database.logsDao().insertRecording(recEntity)
+                Log.d("CallService", "Saved Recording for Log ID: $logId")
             }
-            Log.d("CallService", "Saved Call and Recording Data")
         }
     }
 
