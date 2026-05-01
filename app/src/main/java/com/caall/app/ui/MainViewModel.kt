@@ -32,23 +32,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     val allRecordings: Flow<List<RecordingEntity>> = database.logsDao().getAllRecordings()
+    val recordingsWithDetails: Flow<List<com.caall.app.data.local.dao.RecordingWithLog>> = database.logsDao().getRecordingsWithLogs()
 
-    val callStats: Flow<CallStats> = filteredCallLogs.map { logs ->
-        val hourlyMap = logs.groupBy { 
+    val userNumber: String get() = prefs.getString("user_number", "") ?: ""
+
+    val callStats: Flow<CallStats> = allCallLogs.map { logs ->
+        // Only show stats for the logged-in user
+        val currentUserLogs = logs.filter { it.registeredNumber == userNumber }
+        
+        val hourlyMap = currentUserLogs.groupBy { 
             val cal = java.util.Calendar.getInstance().apply { timeInMillis = it.dateMillis }
             cal.get(java.util.Calendar.HOUR_OF_DAY)
         }.mapValues { it.value.size }
 
         CallStats(
-            incomingCount = logs.count { it.callType == "INCOMING" },
-            outgoingCount = logs.count { it.callType == "OUTGOING" },
-            missedCount = logs.count { it.callType == "MISSED" },
-            totalDurationSeconds = logs.sumOf { it.durationSeconds },
+            incomingCount = currentUserLogs.count { it.callType == "INCOMING" },
+            outgoingCount = currentUserLogs.count { it.callType == "OUTGOING" },
+            missedCount = currentUserLogs.count { it.callType == "MISSED" },
+            totalDurationSeconds = currentUserLogs.sumOf { it.durationSeconds },
             hourlyCounts = hourlyMap
         )
     }
 
     fun isUserRegistered(): Boolean = prefs.getString("user_number", null) != null
+
+    private var cachedApiKey: String? = null
+
+    private suspend fun fetchApiKey(): String? {
+        if (cachedApiKey != null) return cachedApiKey
+        return try {
+            val url = java.net.URL("http://10.0.2.2:3000/api/get-key") // Emulator access to localhost
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.requestMethod = "GET"
+            val text = conn.inputStream.bufferedReader().readText()
+            val key = org.json.JSONObject(text).getString("apiKey")
+            cachedApiKey = key
+            key
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 
     fun registerUser(number: String, university: String, owner: String) {
         prefs.edit().apply {
@@ -75,10 +99,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (unsynced.isEmpty()) return
 
         try {
-            val url = java.net.URL("http://192.168.1.100:5001/api/logs/sync") // Updated to port 5001
+            val key = fetchApiKey() ?: "DEFAULT_KEY" // Fallback if service is down
+            val url = java.net.URL("https://api-gateway.host.com/api/logs/call")
             val conn = url.openConnection() as java.net.HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("X-API-Key", key)
             conn.doOutput = true
 
             val jsonLogs = unsynced.joinToString(",") { log ->
@@ -91,7 +117,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     "type": "${log.callType}",
                     "university": "${log.universityName}",
                     "owner": "${log.ownerName}",
-                    "time": ${log.dateMillis}
+                    "time": ${log.dateMillis},
+                    "status": "${if(log.callType == "MISSED") "missed" else "completed"}"
                 }
                 """.trimIndent()
             }

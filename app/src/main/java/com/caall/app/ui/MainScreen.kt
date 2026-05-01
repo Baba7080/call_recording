@@ -226,7 +226,7 @@ fun CallLogsScreen(viewModel: MainViewModel) {
                                     }
                                 )
                                 Text(
-                                    text = java.text.SimpleDateFormat("dd MMM, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(log.dateMillis)),
+                                    text = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(log.dateMillis)),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -239,10 +239,19 @@ fun CallLogsScreen(viewModel: MainViewModel) {
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("From: ${log.fromNumber}", style = MaterialTheme.typography.bodyMedium)
-                        Text("To: ${log.toNumber}", style = MaterialTheme.typography.bodyMedium)
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("From", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                Text(log.fromNumber, style = MaterialTheme.typography.bodyMedium)
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("To", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                Text(log.toNumber, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
                         if (log.ownerName.isNotBlank()) {
-                            Text("Owner: ${log.ownerName}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Owner: ${log.ownerName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
                         }
                     }
                 }
@@ -253,14 +262,23 @@ fun CallLogsScreen(viewModel: MainViewModel) {
 
 @Composable
 fun RecordingsScreen(viewModel: MainViewModel) {
-    val recordings by viewModel.allRecordings.collectAsState(initial = emptyList())
+    val recordings by viewModel.recordingsWithDetails.collectAsState(initial = emptyList())
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(recordings) { rec ->
+        items(recordings) { item ->
+            val rec = item.recording
+            val log = item.callLog
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Log ID: ${rec.callLogId}", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = if (log.callType == "INCOMING") "From: ${log.fromNumber}" else "To: ${log.toNumber}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (log.ownerName.isNotBlank()) {
+                                Text("Owner: ${log.ownerName}", style = MaterialTheme.typography.labelSmall)
+                            }
                             Text("Duration: ${formatDuration(rec.durationSeconds)}", style = MaterialTheme.typography.bodyMedium)
                             Text(
                                 text = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(rec.recordedAtMillis)),

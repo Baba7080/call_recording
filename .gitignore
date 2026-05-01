@@ -1,0 +1,14 @@
+# Secrets
+server/.env
+local.properties
+
+# Android/Gradle
+.gradle/
+build/
+app/build/
+*.iml
+.idea/
+
+# Node
+node_modules/
+server/node_modules/

@@ -5,9 +5,20 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Embedded
+import androidx.room.Relation
 import com.caall.app.data.local.entity.CallLogEntity
 import com.caall.app.data.local.entity.RecordingEntity
 import kotlinx.coroutines.flow.Flow
+
+data class RecordingWithLog(
+    @Embedded val recording: RecordingEntity,
+    @Relation(
+        parentColumn = "callLogId",
+        entityColumn = "id"
+    )
+    val callLog: CallLogEntity
+)
 
 @Dao
 interface LogsDao {
@@ -31,4 +42,8 @@ interface LogsDao {
 
     @Query("SELECT * FROM recordings ORDER BY recordedAtMillis DESC")
     fun getAllRecordings(): Flow<List<RecordingEntity>>
+
+    @Transaction
+    @Query("SELECT * FROM recordings ORDER BY recordedAtMillis DESC")
+    fun getRecordingsWithLogs(): Flow<List<RecordingWithLog>>
 }
