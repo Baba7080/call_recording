@@ -53,17 +53,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             logCal.get(java.util.Calendar.DAY_OF_YEAR) == selectedCal.get(java.util.Calendar.DAY_OF_YEAR)
         }
         
-        val hourlyMap = filteredByDate.groupBy { 
+        val hourlyCountsMap = filteredByDate.groupBy { 
             val cal = java.util.Calendar.getInstance().apply { timeInMillis = it.dateMillis }
             cal.get(java.util.Calendar.HOUR_OF_DAY)
         }.mapValues { it.value.size }
+
+        val hourlyDurationsMap = filteredByDate.groupBy { 
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = it.dateMillis }
+            cal.get(java.util.Calendar.HOUR_OF_DAY)
+        }.mapValues { it.value.sumOf { log -> log.durationSeconds } }
 
         CallStats(
             incomingCount = filteredByDate.count { it.callType == "INCOMING" },
             outgoingCount = filteredByDate.count { it.callType == "OUTGOING" },
             missedCount = filteredByDate.count { it.callType == "MISSED" },
             totalDurationSeconds = filteredByDate.sumOf { it.durationSeconds },
-            hourlyCounts = hourlyMap
+            hourlyCounts = hourlyCountsMap,
+            hourlyDurations = hourlyDurationsMap
         )
     }
 
@@ -153,5 +159,6 @@ data class CallStats(
     val outgoingCount: Int = 0,
     val missedCount: Int = 0,
     val totalDurationSeconds: Long = 0,
-    val hourlyCounts: Map<Int, Int> = emptyMap()
+    val hourlyCounts: Map<Int, Int> = emptyMap(),
+    val hourlyDurations: Map<Int, Long> = emptyMap()
 )

@@ -8,7 +8,7 @@ build/
 app/build/
 *.iml
 .idea/
-
+server/
 # Node
 node_modules/
 server/node_modules/
