@@ -28,6 +28,11 @@ object NativeCallLogHelper {
                 val dateIndex = it.getColumnIndex(CallLog.Calls.DATE)
                 val durationIndex = it.getColumnIndex(CallLog.Calls.DURATION)
 
+                val prefs = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+                val university = prefs.getString("university", "") ?: ""
+                val owner = prefs.getString("owner", "") ?: ""
+                val registeredNumber = prefs.getString("user_number", "") ?: ""
+
                 while (it.moveToNext()) {
                     val id = it.getString(idIndex)
                     val number = it.getString(numberIndex) ?: "Unknown"
@@ -54,7 +59,10 @@ object NativeCallLogHelper {
                             callType = callTypeStr,
                             durationSeconds = durationSeconds,
                             dateMillis = dateMillis,
-                            simUsed = "Unknown"
+                            simUsed = "Unknown",
+                            universityName = university,
+                            ownerName = owner,
+                            registeredNumber = registeredNumber
                         )
                     )
                 }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,32 +31,86 @@ fun MainScreen(
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Dashboard", "Call Logs", "Recordings")
+    
+    var showRegistration by remember { mutableStateOf(!viewModel.isUserRegistered()) }
 
-    LaunchedEffect(permissionsState.allPermissionsGranted) {
-        if (permissionsState.allPermissionsGranted) {
-            viewModel.syncCallLogs()
+    if (showRegistration) {
+        RegistrationScreen { number, university, owner ->
+            viewModel.registerUser(number, university, owner)
+            showRegistration = false
         }
-    }
+    } else {
+        LaunchedEffect(permissionsState.allPermissionsGranted) {
+            if (permissionsState.allPermissionsGranted) {
+                viewModel.syncCallLogs()
+            }
+        }
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                tabs.forEachIndexed { index, title ->
-                    NavigationBarItem(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        icon = { /* Add Icons here if needed */ },
-                        label = { Text(title) }
-                    )
+        Scaffold(
+            bottomBar = {
+                NavigationBar {
+                    tabs.forEachIndexed { index, title ->
+                        NavigationBarItem(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            icon = { /* Add Icons here if needed */ },
+                            label = { Text(title) }
+                        )
+                    }
+                }
+            }
+        ) { paddingValues ->
+            Box(modifier = Modifier.padding(paddingValues)) {
+                when (selectedTab) {
+                    0 -> DashboardScreen(permissionsState, viewModel)
+                    1 -> CallLogsScreen(viewModel)
+                    2 -> RecordingsScreen(viewModel)
                 }
             }
         }
-    ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues)) {
-            when (selectedTab) {
-                0 -> DashboardScreen(permissionsState)
-                1 -> CallLogsScreen(viewModel)
-                2 -> RecordingsScreen(viewModel)
+    }
+}
+
+@Composable
+fun RegistrationScreen(onRegister: (String, String, String) -> Unit) {
+    var number by remember { mutableStateOf("") }
+    var university by remember { mutableStateOf("") }
+    var owner by remember { mutableStateOf("") }
+
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("Register Device", style = MaterialTheme.typography.headlineLarge)
+            Spacer(modifier = Modifier.height(32.dp))
+            OutlinedTextField(
+                value = number,
+                onValueChange = { number = it },
+                label = { Text("Your Number") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = university,
+                onValueChange = { university = it },
+                label = { Text("University/Code") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = owner,
+                onValueChange = { owner = it },
+                label = { Text("Owner Name") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            Button(
+                onClick = { if (number.isNotBlank() && university.isNotBlank() && owner.isNotBlank()) onRegister(number, university, owner) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Start Logging")
             }
         }
     }
@@ -144,40 +199,52 @@ fun formatDuration(seconds: Long): String {
 
 @Composable
 fun CallLogsScreen(viewModel: MainViewModel) {
-    val callLogs by viewModel.allCallLogs.collectAsState(initial = emptyList())
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(callLogs) { log ->
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column {
-                            Text(
-                                text = log.callType,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = when(log.callType) {
-                                    "INCOMING" -> Color(0xFF4CAF50)
-                                    "OUTGOING" -> Color(0xFF2196F3)
-                                    else -> Color(0xFFF44336)
+    val callLogs by viewModel.filteredCallLogs.collectAsState(initial = emptyList())
+    
+    Column(modifier = Modifier.fillMaxSize()) {
+        OutlinedTextField(
+            value = viewModel.searchQuery,
+            onValueChange = { viewModel.searchQuery = it },
+            label = { Text("Search by University or Owner") },
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            leadingIcon = { Icon(androidx.compose.material.icons.filled.Search, contentDescription = "Search") }
+        )
+
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            items(callLogs) { log ->
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column {
+                                Text(
+                                    text = log.callType,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = when(log.callType) {
+                                        "INCOMING" -> Color(0xFF4CAF50)
+                                        "OUTGOING" -> Color(0xFF2196F3)
+                                        else -> Color(0xFFF44336)
+                                    }
+                                )
+                                Text(
+                                    text = java.text.SimpleDateFormat("dd MMM, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(log.dateMillis)),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(text = formatDuration(log.durationSeconds), style = MaterialTheme.typography.bodyLarge)
+                                if (log.universityName.isNotBlank()) {
+                                    Text(text = log.universityName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                 }
-                            )
-                            Text(
-                                text = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(log.dateMillis)),
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
-                            )
+                            }
                         }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(text = formatDuration(log.durationSeconds), style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                text = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(log.dateMillis)),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
-                            )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("From: ${log.fromNumber}", style = MaterialTheme.typography.bodyMedium)
+                        Text("To: ${log.toNumber}", style = MaterialTheme.typography.bodyMedium)
+                        if (log.ownerName.isNotBlank()) {
+                            Text("Owner: ${log.ownerName}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("From: ${log.fromNumber}", style = MaterialTheme.typography.titleMedium)
-                    Text("To: ${log.toNumber}", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }

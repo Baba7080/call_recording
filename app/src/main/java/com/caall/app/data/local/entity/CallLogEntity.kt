@@ -17,5 +17,8 @@ data class CallLogEntity(
     val callType: String, // INCOMING, OUTGOING, MISSED
     val durationSeconds: Long,
     val dateMillis: Long,
-    val simUsed: String // SIM 1, SIM 2
+    val simUsed: String, // SIM 1, SIM 2
+    val universityName: String = "",
+    val ownerName: String = "",
+    val registeredNumber: String = ""
 )
