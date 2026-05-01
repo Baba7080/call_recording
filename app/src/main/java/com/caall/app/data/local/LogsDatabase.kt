@@ -8,7 +8,7 @@ import com.caall.app.data.local.dao.LogsDao
 import com.caall.app.data.local.entity.CallLogEntity
 import com.caall.app.data.local.entity.RecordingEntity
 
-@Database(entities = [CallLogEntity::class, RecordingEntity::class], version = 1, exportSchema = false)
+@Database(entities = [CallLogEntity::class, RecordingEntity::class], version = 2, exportSchema = false)
 abstract class LogsDatabase : RoomDatabase() {
     abstract fun logsDao(): LogsDao
 
@@ -22,7 +22,9 @@ abstract class LogsDatabase : RoomDatabase() {
                     context.applicationContext,
                     LogsDatabase::class.java,
                     "caall_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }

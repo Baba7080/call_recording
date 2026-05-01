@@ -1,12 +1,17 @@
 package com.caall.app.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "call_logs")
+@Entity(
+    tableName = "call_logs",
+    indices = [Index(value = ["nativeLogId"], unique = true)]
+)
 data class CallLogEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    val nativeLogId: String? = null,
     val fromNumber: String,
     val toNumber: String,
     val callType: String, // INCOMING, OUTGOING, MISSED

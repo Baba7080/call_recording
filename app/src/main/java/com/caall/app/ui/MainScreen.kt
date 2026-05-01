@@ -22,6 +22,12 @@ fun MainScreen(
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Dashboard", "Call Logs", "Recordings")
 
+    LaunchedEffect(permissionsState.allPermissionsGranted) {
+        if (permissionsState.allPermissionsGranted) {
+            viewModel.syncCallLogs()
+        }
+    }
+
     Scaffold(
         bottomBar = {
             NavigationBar {

@@ -2,6 +2,7 @@ package com.caall.app.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.caall.app.data.local.entity.CallLogEntity
@@ -12,6 +13,9 @@ import kotlinx.coroutines.flow.Flow
 interface LogsDao {
     @Insert
     suspend fun insertCallLog(callLog: CallLogEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCallLogs(callLogs: List<CallLogEntity>)
 
     @Insert
     suspend fun insertRecording(recording: RecordingEntity): Long
