@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+
+    <cloud-backup>
+        <!-- Include your Room database -->
+        <include domain="database" path="."/>
+
+        <!-- Include shared preferences -->
+        <include domain="sharedpref" path="."/>
+
+        <!-- Optional: include files -->
+        <include domain="file" path="."/>
+    </cloud-backup>
+
+    <device-transfer>
+        <!-- Same rules for device-to-device transfer -->
+        <include domain="database" path="."/>
+        <include domain="sharedpref" path="."/>
+        <include domain="file" path="."/>
+    </device-transfer>
+
+</data-extraction-rules>

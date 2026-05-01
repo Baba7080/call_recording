@@ -26,7 +26,7 @@ import android.app.DatePickerDialog
 import java.io.File
 import java.util.*
 
-@OptIn(ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     permissionsState: MultiplePermissionsState,
@@ -34,7 +34,7 @@ fun MainScreen(
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Dashboard", "Call Logs", "Recordings")
-    
+
     var showRegistration by remember { mutableStateOf(!viewModel.isUserRegistered()) }
 
     if (showRegistration) {
@@ -52,11 +52,7 @@ fun MainScreen(
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text("ByteDail", fontWeight = FontWeight.Bold) },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.primary
-                    )
+                    title = { Text("ByteDail", fontWeight = FontWeight.Bold) }
                 )
             },
             bottomBar = {
@@ -65,7 +61,7 @@ fun MainScreen(
                         NavigationBarItem(
                             selected = selectedTab == index,
                             onClick = { selectedTab = index },
-                            icon = { /* Add Icons here if needed */ },
+                            icon = {},
                             label = { Text(title) }
                         )
                     }
@@ -82,44 +78,51 @@ fun MainScreen(
         }
     }
 }
-
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun DashboardScreen(
+    permissionsState: MultiplePermissionsState,
+    viewModel: MainViewModel = viewModel()
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("Dashboard Screen")
+    }
+}
 @Composable
 fun RegistrationScreen(onRegister: (String, String, String) -> Unit) {
     var number by remember { mutableStateOf("") }
     var university by remember { mutableStateOf("") }
     var owner by remember { mutableStateOf("") }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.fillMaxSize().padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Text("Register Device", style = MaterialTheme.typography.headlineLarge)
+
             Spacer(modifier = Modifier.height(32.dp))
-            OutlinedTextField(
-                value = number,
-                onValueChange = { number = it },
-                label = { Text("Your Number") },
-                modifier = Modifier.fillMaxWidth()
-            )
+
+            OutlinedTextField(number, { number = it }, label = { Text("Your Number") })
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = university,
-                onValueChange = { university = it },
-                label = { Text("University/Code") },
-                modifier = Modifier.fillMaxWidth()
-            )
+
+            OutlinedTextField(university, { university = it }, label = { Text("University/Code") })
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = owner,
-                onValueChange = { owner = it },
-                label = { Text("Owner Name") },
-                modifier = Modifier.fillMaxWidth()
-            )
+
+            OutlinedTextField(owner, { owner = it }, label = { Text("Owner Name") })
+
             Spacer(modifier = Modifier.height(32.dp))
+
             Button(
-                onClick = { if (number.isNotBlank() && university.isNotBlank() && owner.isNotBlank()) onRegister(number, university, owner) },
+                onClick = {
+                    if (number.isNotBlank() && university.isNotBlank() && owner.isNotBlank()) {
+                        onRegister(number, university, owner)
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Start Logging")
@@ -128,172 +131,31 @@ fun RegistrationScreen(onRegister: (String, String, String) -> Unit) {
     }
 }
 
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun DashboardScreen(permissionsState: MultiplePermissionsState, viewModel: MainViewModel = viewModel()) {
-    val stats by viewModel.callStats.collectAsState(initial = CallStats())
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
-    ) {
-        val context = LocalContext.current
-        val calendar = Calendar.getInstance().apply { timeInMillis = viewModel.selectedDate }
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Stats for ${java.text.SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(viewModel.selectedDate))}",
-                style = MaterialTheme.typography.titleLarge
-            )
-            IconButton(onClick = {
-                DatePickerDialog(
-                    context,
-                    { _, year, month, dayOfMonth ->
-                        val cal = Calendar.getInstance().apply {
-                            set(year, month, dayOfMonth, 0, 0, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }
-                        viewModel.selectedDate = cal.timeInMillis
-                    },
-                    calendar.get(Calendar.YEAR),
-                    calendar.get(Calendar.MONTH),
-                    calendar.get(Calendar.DAY_OF_MONTH)
-                ).show()
-            }) {
-                Icon(Icons.Default.DateRange, contentDescription = "Select Date")
-            }
-        }
-        
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            StatCard("Incoming", stats.incomingCount.toString(), Color(0xFF4CAF50))
-            StatCard("Outgoing", stats.outgoingCount.toString(), Color(0xFF2196F3))
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            StatCard("Missed", stats.missedCount.toString(), Color(0xFFF44336))
-            StatCard("Total Duration", formatDuration(stats.totalDurationSeconds), Color(0xFF9C27B0))
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-        Text("Hourly Call Report", style = MaterialTheme.typography.titleLarge, modifier = Modifier.align(Alignment.Start))
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                if (stats.hourlyCounts.isEmpty()) {
-                    Text("No data for today", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                } else {
-                    stats.hourlyCounts.keys.sorted().forEach { hour ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(text = "%02d:00 - %02d:59".format(hour, hour), style = MaterialTheme.typography.bodyMedium)
-                            Text(text = "${stats.hourlyCounts[hour]} calls", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        if (permissionsState.allPermissionsGranted) {
-            Text("Status: Active", style = MaterialTheme.typography.bodyLarge, color = Color.Green)
-        } else {
-            Text("Permission Missing", style = MaterialTheme.typography.headlineMedium, color = Color.Red)
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { permissionsState.launchMultiplePermissionRequest() }) {
-                Text("Grant Permissions")
-            }
-        }
-    }
-}
-
-@Composable
-fun StatCard(label: String, value: String, color: Color) {
-    Card(
-        modifier = Modifier.width(160.dp).padding(4.dp),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))
-    ) {
-        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = color)
-            Text(value, style = MaterialTheme.typography.headlineSmall, color = color)
-        }
-    }
-}
-
-fun formatDuration(seconds: Long): String {
-    val h = seconds / 3600
-    val m = (seconds % 3600) / 60
-    val s = seconds % 60
-    return if (h > 0) "%dh %dm %ds".format(h, m, s) else "%dm %ds".format(m, s)
-}
-
 @Composable
 fun CallLogsScreen(viewModel: MainViewModel) {
     val callLogs by viewModel.filteredCallLogs.collectAsState(initial = emptyList())
-    
+
     Column(modifier = Modifier.fillMaxSize()) {
         OutlinedTextField(
             value = viewModel.searchQuery,
             onValueChange = { viewModel.searchQuery = it },
             label = { Text("Search by University or Owner") },
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            leadingIcon = { Icon(androidx.compose.material.icons.filled.Search, contentDescription = "Search") }
+            leadingIcon = {
+                Icon(Icons.Filled.Search, contentDescription = "Search")
+            }
         )
 
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(callLogs) { log ->
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column {
-                                Text(
-                                    text = log.callType,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = when(log.callType) {
-                                        "INCOMING" -> Color(0xFF4CAF50)
-                                        "OUTGOING" -> Color(0xFF2196F3)
-                                        else -> Color(0xFFF44336)
-                                    }
-                                )
-                                Text(
-                                    text = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(log.dateMillis)),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(text = formatDuration(log.durationSeconds), style = MaterialTheme.typography.bodyLarge)
-                                if (log.universityName.isNotBlank()) {
-                                    Text(text = log.universityName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("From", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                                Text(log.fromNumber, style = MaterialTheme.typography.bodyMedium)
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("To", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                                Text(log.toNumber, style = MaterialTheme.typography.bodyMedium)
-                            }
-                        }
-                        if (log.ownerName.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("Owner: ${log.ownerName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
-                        }
+                        Text(log.callType, fontWeight = FontWeight.Bold)
+                        Text(formatDuration(log.durationSeconds))
                     }
                 }
             }
@@ -304,31 +166,15 @@ fun CallLogsScreen(viewModel: MainViewModel) {
 @Composable
 fun RecordingsScreen(viewModel: MainViewModel) {
     val recordings by viewModel.recordingsWithDetails.collectAsState(initial = emptyList())
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+
+    LazyColumn {
         items(recordings) { item ->
-            val rec = item.recording
-            val log = item.callLog
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (log.callType == "INCOMING") "From: ${log.fromNumber}" else "To: ${log.toNumber}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (log.ownerName.isNotBlank()) {
-                                Text("Owner: ${log.ownerName}", style = MaterialTheme.typography.labelSmall)
-                            }
-                            Text("Duration: ${formatDuration(rec.durationSeconds)}", style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                text = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(rec.recordedAtMillis)),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
-                            )
-                        }
-                        RecordingPlayer(rec.filePath)
+            Card(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Row(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Duration: ${formatDuration(item.recording.durationSeconds)}")
                     }
+                    RecordingPlayer(item.recording.filePath)
                 }
             }
         }
@@ -343,43 +189,40 @@ fun RecordingPlayer(filePath: String) {
     DisposableEffect(Unit) {
         onDispose {
             mediaPlayer?.release()
-            mediaPlayer = null
         }
     }
 
-    IconButton(
-        onClick = {
-            if (isPlaying) {
-                mediaPlayer?.stop()
-                mediaPlayer?.release()
-                mediaPlayer = null
-                isPlaying = false
-            } else {
-                val file = File(filePath)
-                if (file.exists()) {
-                    try {
-                        mediaPlayer = MediaPlayer().apply {
-                            setDataSource(filePath)
-                            prepare()
-                            start()
-                            setOnCompletionListener {
-                                isPlaying = false
-                                release()
-                                mediaPlayer = null
-                            }
-                        }
-                        isPlaying = true
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+    IconButton(onClick = {
+        if (isPlaying) {
+            mediaPlayer?.stop()
+            mediaPlayer?.release()
+            mediaPlayer = null
+            isPlaying = false
+        } else {
+            val file = File(filePath)
+            if (file.exists()) {
+                mediaPlayer = MediaPlayer().apply {
+                    setDataSource(filePath)
+                    prepare()
+                    start()
+                    setOnCompletionListener {
+                        isPlaying = false
+                        release()
                     }
                 }
+                isPlaying = true
             }
         }
-    ) {
+    }) {
         Icon(
-            imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
-            contentDescription = if (isPlaying) "Stop" else "Play",
-            tint = MaterialTheme.colorScheme.primary
+            imageVector = if (isPlaying) Icons.Filled.Stop else Icons.Filled.PlayArrow,
+            contentDescription = null
         )
     }
+}
+
+fun formatDuration(seconds: Long): String {
+    val m = seconds / 60
+    val s = seconds % 60
+    return "$m:$s"
 }
