@@ -75,7 +75,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (unsynced.isEmpty()) return
 
         try {
-            val url = java.net.URL("http://192.168.1.100:5000/api/logs/sync") // TODO: Replace with actual backend IP
+            val url = java.net.URL("http://192.168.1.100:5001/api/logs/sync") // Updated to port 5001
             val conn = url.openConnection() as java.net.HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json")
