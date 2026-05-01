@@ -14,6 +14,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import android.media.MediaPlayer
@@ -66,6 +69,7 @@ fun DashboardScreen(permissionsState: MultiplePermissionsState, viewModel: MainV
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
@@ -80,6 +84,28 @@ fun DashboardScreen(permissionsState: MultiplePermissionsState, viewModel: MainV
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             StatCard("Missed", stats.missedCount.toString(), Color(0xFFF44336))
             StatCard("Total Duration", formatDuration(stats.totalDurationSeconds), Color(0xFF9C27B0))
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+        Text("Hourly Call Report", style = MaterialTheme.typography.titleLarge, modifier = Modifier.align(Alignment.Start))
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                if (stats.hourlyCounts.isEmpty()) {
+                    Text("No data for today", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                } else {
+                    stats.hourlyCounts.keys.sorted().forEach { hour ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(text = "%02d:00 - %02d:59".format(hour, hour), style = MaterialTheme.typography.bodyMedium)
+                            Text(text = "${stats.hourlyCounts[hour]} calls", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -124,25 +150,34 @@ fun CallLogsScreen(viewModel: MainViewModel) {
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(
-                            text = log.callType,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = when(log.callType) {
-                                "INCOMING" -> Color(0xFF4CAF50)
-                                "OUTGOING" -> Color(0xFF2196F3)
-                                else -> Color(0xFFF44336)
-                            }
-                        )
-                        Text(text = formatDuration(log.durationSeconds), style = MaterialTheme.typography.bodySmall)
+                        Column {
+                            Text(
+                                text = log.callType,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = when(log.callType) {
+                                    "INCOMING" -> Color(0xFF4CAF50)
+                                    "OUTGOING" -> Color(0xFF2196F3)
+                                    else -> Color(0xFFF44336)
+                                }
+                            )
+                            Text(
+                                text = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(log.dateMillis)),
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(text = formatDuration(log.durationSeconds), style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                text = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(log.dateMillis)),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                        }
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text("From: ${log.fromNumber}", style = MaterialTheme.typography.titleMedium)
                     Text("To: ${log.toNumber}", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        text = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(log.dateMillis)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
                 }
             }
         }

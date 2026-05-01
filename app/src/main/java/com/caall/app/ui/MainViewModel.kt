@@ -19,11 +19,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val allRecordings: Flow<List<RecordingEntity>> = database.logsDao().getAllRecordings()
 
     val callStats: Flow<CallStats> = allCallLogs.map { logs ->
+        val hourlyMap = logs.groupBy { 
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = it.dateMillis }
+            cal.get(java.util.Calendar.HOUR_OF_DAY)
+        }.mapValues { it.value.size }
+
         CallStats(
             incomingCount = logs.count { it.callType == "INCOMING" },
             outgoingCount = logs.count { it.callType == "OUTGOING" },
             missedCount = logs.count { it.callType == "MISSED" },
-            totalDurationSeconds = logs.sumOf { it.durationSeconds }
+            totalDurationSeconds = logs.sumOf { it.durationSeconds },
+            hourlyCounts = hourlyMap
         )
     }
 
@@ -42,5 +48,6 @@ data class CallStats(
     val incomingCount: Int = 0,
     val outgoingCount: Int = 0,
     val missedCount: Int = 0,
-    val totalDurationSeconds: Long = 0
+    val totalDurationSeconds: Long = 0,
+    val hourlyCounts: Map<Int, Int> = emptyMap()
 )
