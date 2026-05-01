@@ -65,7 +65,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val nativeLogs = NativeCallLogHelper.fetchNativeCallLogs(context)
             if (nativeLogs.isNotEmpty()) {
                 database.logsDao().insertCallLogs(nativeLogs)
+                syncLogsToRemote()
             }
+        }
+    }
+
+    private suspend fun syncLogsToRemote() {
+        val unsynced = database.logsDao().getUnsyncedLogs()
+        if (unsynced.isEmpty()) return
+
+        try {
+            val url = java.net.URL("http://192.168.1.100:5000/api/logs/sync") // TODO: Replace with actual backend IP
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+
+            val jsonLogs = unsynced.joinToString(",") { log ->
+                """
+                {
+                    "callId": "${log.nativeLogId}",
+                    "from": "${log.fromNumber}",
+                    "to": "${log.toNumber}",
+                    "duration": ${log.durationSeconds},
+                    "type": "${log.callType}",
+                    "university": "${log.universityName}",
+                    "owner": "${log.ownerName}",
+                    "time": ${log.dateMillis}
+                }
+                """.trimIndent()
+            }
+            val body = """{"logs": [$jsonLogs]}"""
+
+            conn.outputStream.use { it.write(body.toByteArray()) }
+
+            if (conn.responseCode == 200) {
+                database.logsDao().markLogsAsSynced(unsynced.map { it.id })
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }

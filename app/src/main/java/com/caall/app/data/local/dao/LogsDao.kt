@@ -23,6 +23,12 @@ interface LogsDao {
     @Query("SELECT * FROM call_logs ORDER BY dateMillis DESC")
     fun getAllCallLogs(): Flow<List<CallLogEntity>>
 
+    @Query("SELECT * FROM call_logs WHERE isSynced = 0")
+    suspend fun getUnsyncedLogs(): List<CallLogEntity>
+
+    @Query("UPDATE call_logs SET isSynced = 1 WHERE id IN (:logIds)")
+    suspend fun markLogsAsSynced(logIds: List<Long>)
+
     @Query("SELECT * FROM recordings ORDER BY recordedAtMillis DESC")
     fun getAllRecordings(): Flow<List<RecordingEntity>>
 }

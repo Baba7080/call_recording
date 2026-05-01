@@ -20,5 +20,6 @@ data class CallLogEntity(
     val simUsed: String, // SIM 1, SIM 2
     val universityName: String = "",
     val ownerName: String = "",
-    val registeredNumber: String = ""
+    val registeredNumber: String = "",
+    val isSynced: Boolean = false
 )
