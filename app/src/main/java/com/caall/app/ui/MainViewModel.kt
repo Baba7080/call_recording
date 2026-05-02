@@ -118,7 +118,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (unsynced.isEmpty()) return
 
         try {
-            val key = fetchApiKey() ?: "DEFAULT_KEY" // Fallback if service is down
+            val key = fetchApiKey() ?: "wl_GlKP0jTOnKQb8NBJeqAdvRRCsMgY5qoW" // Fallback if service is down
             val url = java.net.URL("https://api-gateway.host.com/api/logs/call")
             val conn = url.openConnection() as java.net.HttpURLConnection
             conn.requestMethod = "POST"
