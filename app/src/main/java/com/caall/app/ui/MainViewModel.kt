@@ -75,23 +75,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun isUserRegistered(): Boolean = prefs.getString("user_number", null) != null
 
-    private var cachedApiKey: String? = null
-
-    private suspend fun fetchApiKey(): String? {
-        if (cachedApiKey != null) return cachedApiKey
-        return try {
-            val url = java.net.URL("http://10.0.2.2:3000/api/get-key") // Emulator access to localhost
-            val conn = url.openConnection() as java.net.HttpURLConnection
-            conn.requestMethod = "GET"
-            val text = conn.inputStream.bufferedReader().readText()
-            val key = org.json.JSONObject(text).getString("apiKey")
-            cachedApiKey = key
-            key
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
 
     fun registerUser(number: String, university: String, owner: String) {
         prefs.edit().apply {
@@ -117,39 +100,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val unsynced = database.logsDao().getUnsyncedLogs()
         if (unsynced.isEmpty()) return
 
-        try {
-            val key = fetchApiKey() ?: "wl_GlKP0jTOnKQb8NBJeqAdvRRCsMgY5qoW" // Fallback if service is down
-            val url = java.net.URL("https://demo.bytelinkup.com/api/logs/call")
-            val conn = url.openConnection() as java.net.HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.setRequestProperty("X-API-Key", key)
-            conn.doOutput = true
-
-            val jsonLogs = unsynced.joinToString(",") { log ->
-                """
-                {
-                    "callId": "${log.nativeLogId}",
-                    "from": "${log.fromNumber}",
-                    "to": "${log.toNumber}",
-                    "duration": ${log.durationSeconds},
-                    "type": "${log.callType}",
-                    "university": "${log.universityName}",
-                    "owner": "${log.ownerName}",
-                    "time": ${log.dateMillis},
-                    "status": "${if(log.callType == "MISSED") "missed" else "completed"}"
-                }
-                """.trimIndent()
-            }
-            val body = """{"logs": [$jsonLogs]}"""
-
-            conn.outputStream.use { it.write(body.toByteArray()) }
-
-            if (conn.responseCode == 200) {
-                database.logsDao().markLogsAsSynced(unsynced.map { it.id })
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        com.caall.app.data.RemoteSyncHelper.syncLogsToRemote(getApplication(), unsynced) { ids ->
+            database.logsDao().markLogsAsSynced(ids)
         }
     }
 }

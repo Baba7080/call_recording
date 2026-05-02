@@ -106,6 +106,8 @@ class CallService : Service() {
             val logId = database.logsDao().insertCallLog(logEntity)
             Log.d("CallService", "Saved Call Log ID: $logId")
 
+            val savedLog = logEntity.copy(id = logId)
+
             if (recPath != null) {
                 val recEntity = RecordingEntity(
                     callLogId = logId,
@@ -115,6 +117,12 @@ class CallService : Service() {
                 )
                 database.logsDao().insertRecording(recEntity)
                 Log.d("CallService", "Saved Recording for Log ID: $logId")
+            }
+
+            // Real-time API Sync
+            com.caall.app.data.RemoteSyncHelper.syncLogsToRemote(this@CallService, listOf(savedLog)) { ids ->
+                database.logsDao().markLogsAsSynced(ids)
+                Log.d("CallService", "Real-time sync successful for IDs: $ids")
             }
         }
     }
