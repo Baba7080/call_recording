@@ -75,4 +75,25 @@ object NativeCallLogHelper {
 
         return callLogs
     }
+
+    fun getLatestCallNumber(context: Context): String? {
+        var number: String? = null
+        try {
+            val cursor = context.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls.NUMBER),
+                null,
+                null,
+                CallLog.Calls.DATE + " DESC"
+            )
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    number = it.getString(0)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("NativeCallLogHelper", "Error getting latest call number", e)
+        }
+        return number
+    }
 }

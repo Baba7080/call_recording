@@ -87,14 +87,27 @@ class CallService : Service() {
 
     private fun saveCallData(type: String, number: String, duration: Long, recPath: String?) {
         scope.launch {
+            var finalNumber = number
+            
+            // For outgoing calls, the number is often "Unknown" in the broadcast.
+            // We wait a bit and fetch it from the native CallLog.
+            if (finalNumber == "Unknown" || finalNumber.isBlank()) {
+                kotlinx.coroutines.delay(1500) // Wait for system to log the call
+                val latestNumber = NativeCallLogHelper.getLatestCallNumber(this@CallService)
+                if (latestNumber != null) {
+                    finalNumber = latestNumber
+                    Log.d("CallService", "Fetched missing number from CallLog: $finalNumber")
+                }
+            }
+
             val prefs = getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
             val university = prefs.getString("university", "") ?: ""
             val owner = prefs.getString("owner", "") ?: ""
             val registeredNumber = prefs.getString("user_number", "") ?: ""
 
             val logEntity = CallLogEntity(
-                fromNumber = if (type == "INCOMING" || type == "MISSED") number else registeredNumber,
-                toNumber = if (type == "OUTGOING") number else registeredNumber,
+                fromNumber = if (type == "INCOMING" || type == "MISSED") finalNumber else registeredNumber,
+                toNumber = if (type == "OUTGOING") finalNumber else registeredNumber,
                 callType = type,
                 durationSeconds = duration,
                 dateMillis = System.currentTimeMillis(),
