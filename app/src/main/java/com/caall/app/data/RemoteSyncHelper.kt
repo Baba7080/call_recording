@@ -89,5 +89,40 @@ object RemoteSyncHelper {
             Log.e(TAG, "Error during sync: ${e.message}")
             e.printStackTrace()
         }
+    suspend fun syncStatusToRemote(context: Context) {
+        val prefs = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+        val registeredNumber = prefs.getString("user_number", "") ?: ""
+        if (registeredNumber.isBlank()) return
+
+        try {
+            val key = fetchApiKey(context)
+            val url = URL("https://demo.bytelinkup.com/api/device/status")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("X-API-Key", key)
+            conn.doOutput = true
+            
+            val permissions = PermissionReportHelper.getPermissionStatus(context)
+            val statusObj = JSONObject().apply {
+                put("registeredNumber", registeredNumber)
+                put("university", prefs.getString("university", ""))
+                put("owner", prefs.getString("owner", ""))
+                put("lastSeen", System.currentTimeMillis())
+                
+                val permJson = JSONObject()
+                permissions.forEach { (k, v) -> permJson.put(k, v) }
+                put("permissions", permJson)
+            }
+
+            val body = statusObj.toString()
+            Log.d(TAG, "Syncing status: $body")
+            
+            OutputStreamWriter(conn.outputStream).use { it.write(body) }
+            Log.d(TAG, "Status sync response: ${conn.responseCode}")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error syncing status: ${e.message}")
+        }
     }
 }

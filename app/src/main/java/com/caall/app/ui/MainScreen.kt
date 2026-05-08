@@ -43,9 +43,14 @@ fun MainScreen(
             showRegistration = false
         }
     } else {
+        val context = LocalContext.current
         LaunchedEffect(permissionsState.allPermissionsGranted) {
             if (permissionsState.allPermissionsGranted) {
                 viewModel.syncCallLogs()
+            }
+            // Always sync status so admin knows which permissions are missing
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.caall.app.data.RemoteSyncHelper.syncStatusToRemote(context)
             }
         }
 
