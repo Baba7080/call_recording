@@ -124,5 +124,30 @@ object RemoteSyncHelper {
         } catch (e: Exception) {
             Log.e(TAG, "Error syncing status: ${e.message}")
         }
+    suspend fun syncFcmToken(context: Context, token: String) {
+        val prefs = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+        val registeredNumber = prefs.getString("user_number", "") ?: ""
+        if (registeredNumber.isBlank()) return
+
+        try {
+            val key = fetchApiKey(context)
+            val url = URL("https://demo.bytelinkup.com/api/device/token")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("X-API-Key", key)
+            conn.doOutput = true
+
+            val tokenObj = JSONObject().apply {
+                put("registeredNumber", registeredNumber)
+                put("fcmToken", token)
+            }
+
+            val body = tokenObj.toString()
+            OutputStreamWriter(conn.outputStream).use { it.write(body) }
+            Log.d(TAG, "Token sync response: ${conn.responseCode}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error syncing FCM token: ${e.message}")
+        }
     }
 }

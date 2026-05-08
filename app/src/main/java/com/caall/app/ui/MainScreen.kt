@@ -52,6 +52,19 @@ fun MainScreen(
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 com.caall.app.data.RemoteSyncHelper.syncStatusToRemote(context)
             }
+
+            // Sync FCM Token
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val token = task.result
+                    val prefs = context.getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
+                    prefs.edit().putString("fcm_token", token).apply()
+                    
+                    kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        com.caall.app.data.RemoteSyncHelper.syncFcmToken(context, token)
+                    }
+                }
+            }
         }
 
         Scaffold(
